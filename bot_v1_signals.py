@@ -73,9 +73,7 @@ def main():
                 last_signal = 1
             elif signal == -1 and last_signal != -1:
                 logger.info(f"🔴 SHORT сигнал! Цена: {df['close'].iloc[-1]:.2f}")
-                дфые_ышптфд = -1
-            elif signal == 0:
-                pass
+                last_signal = -1
 
             time.sleep(60)
 
