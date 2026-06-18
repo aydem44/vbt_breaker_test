@@ -8,6 +8,7 @@ import os
 import logging
 from dotenv import load_dotenv
 from pybit.unified_trading import HTTP
+from config import CATEGORY
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -21,7 +22,7 @@ os.environ['HTTP_PROXY'] = proxy_url
 os.environ['HTTPS_PROXY'] = proxy_url
 
 session = HTTP(
-    testnet = True,
+    testnet = False,
     api_key = os.getenv('BYBIT_API_KEY'),
     api_secret = os.getenv('BYBIT_SECRET')
 )
@@ -48,21 +49,21 @@ def place_market_order(symbol, side, qty, tp, sl):
     try:
         logger.info(f"📈 Отправка ордера: {side} {qty} {symbol}. TP={tp} SL={sl}")
         order = session.place_order(
-            category='spot',
+            category=CATEGORY,
             symbol=symbol,
             side=side,
-            qty=str(qty),
+            qty=str(qty), 
             orderType='Market',
-            takeProfit=str(tp),
-            stopLoss=str(sl),
-            marketUnit='baseCoin'
-        )
-        logger.info(f"✅ Ордер исполнен: {order}")
+            marketUnit='baseCoin',
+            takeProfit=str(tp),  
+            stopLoss=str(sl)
+)
+        logger.info(f"✅ Ордер исполнен: {order}")      
         return order
 
     except Exception as e:
         logger.error(f"❌ Ошибка ордера: {e}")
-        return None    
+        return None   
 
 def open_long(symbol, qty, tp, sl):
     return place_market_order(symbol, 'Buy', qty, tp, sl)
@@ -86,7 +87,7 @@ def close_position(symbol):
 def test_connection():
     try:
         balance = get_balance('USDT')
-        logger.info(f"✅ Подключение к Bybit Testnet успешно!")
+        logger.info(f"✅ Подключение к Bybit успешно!")
         logger.info(f"💰 Баланс USDT: {balance}")    
         return True
     except Exception as e:

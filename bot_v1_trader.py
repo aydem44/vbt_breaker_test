@@ -5,14 +5,14 @@
 
 
 # bot_v1_trader
-# Торговля на бирже по сигналам (Тестнет Bybit)
+# Торговля на бирже по сигналам 
 import pandas as pd
 import os
 import logging
 import time
 from dotenv import load_dotenv
 from pybit.unified_trading import HTTP
-from config import STRATEGY_PARAMS, SYMBOL, TIMEFRAME, POSITION_SIZE
+from config import STRATEGY_PARAMS, SYMBOL, TIMEFRAME, POSITION_SIZE, CATEGORY
 from strategy import generating_signals
 from trader import get_balance, place_market_order, open_long, open_short, close_position, test_connection
 
@@ -36,15 +36,14 @@ os.environ['HTTPS_PROXY'] = proxy_url
 
 # Настройка подключения к Байбит
 session = HTTP(
-    testnet=True,
+    testnet=False,
     api_key=os.getenv('BYBIT_API_KEY'),
     api_secret=os.getenv('BYBIT_SECRET')
 )
-public_session = HTTP(testnet=True, timeout=30)
 
 def fetch_klines(limit=200):
-    klines = public_session.get_kline(
-        category='spot',
+    klines = session.get_kline(
+        category=CATEGORY,
         symbol = SYMBOL,
         interval = TIMEFRAME,
         limit = limit)
@@ -58,11 +57,11 @@ def fetch_klines(limit=200):
 
 def main():
     logger.info("="*60)
-    logger.info("🤖 ТОРГОВЫЙ РОБОТ ЗАПУЩЕН (реальная торговля на тестовой сети)")
+    logger.info("🤖 ТОРГОВЫЙ РОБОТ ЗАПУЩЕН (реальная торговля)")
     logger.info(f"Символ: {SYMBOL}")
     logger.info(f"Таймфрейм: {TIMEFRAME}")
     logger.info(f"Параметры: {STRATEGY_PARAMS}")
-    logger.info(f"Размер позиции: {POSITION_SIZE} BTC")
+    logger.info(f"Размер позиции: {POSITION_SIZE} {SYMBOL[0:3]}")
     logger.info("="*60)
 
     # Проверим подключение
@@ -77,12 +76,13 @@ def main():
     while True:
         try:
             df = fetch_klines(limit=200)
-            signal, sl, tp = generating_signals(df, STRATEGY_PARAMS)
+            signal, tp, sl = generating_signals(df, STRATEGY_PARAMS)
             current_price = df['close'].iloc[-1]
 
             if time.time() - last_heartbeat > 300:
                 balance = get_balance('USDT')
-                logger.info(f"💓 Heartbeat | USDT: {balance} | Цена: {current_price}")
+                balance_mnt = get_balance('MNT')
+                logger.info(f"💓 Heartbeat | USDT: {balance} | MNT: {balance_mnt} | Цена: {current_price}")
                 last_heartbeat = time.time()
 
             if signal == 1 and last_signal != 1 and not position:
@@ -99,13 +99,13 @@ def main():
                     position = {'side' : 'short', 'entry' : current_price, 'qty' : POSITION_SIZE}
                     last_signal = -1
                     logger.info(f"✅ SHORT позиция открыта! {POSITION_SIZE} BTC по {current_price:.2f}") 
-            time.sleep(60)
 
             # Проверка, не закрылась ли позиция (по стопу/тейку)
-            if position:
-                # Здесь можно проверить баланс BTC — если его нет, значит позиция закрыта
-                btc_balance = get_balance('BTC')
-                if btc_balance == 0 or btc_balance is None:
+            pos_info = session.get_positions(
+                category=CATEGORY,
+                symbol=SYMBOL
+            )
+            if pos_info and float(pos_info.get('result').get('list')[0].get('size')) < 10 and position:
                     logger.info(f"🔒 Позиция закрыта (по стопу или тейку)")
                     position = None
                     last_signal = None
