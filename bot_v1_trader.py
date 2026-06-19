@@ -81,8 +81,7 @@ def main():
 
             if time.time() - last_heartbeat > 300:
                 balance = get_balance('USDT')
-                balance_mnt = get_balance('MNT')
-                logger.info(f"💓 Heartbeat | USDT: {balance} | MNT: {balance_mnt} | Цена: {current_price}")
+                logger.info(f"💓 Heartbeat | USDT: {balance} | Цена: {current_price}")
                 last_heartbeat = time.time()
 
             if signal == 1 and last_signal != 1 and not position:
@@ -91,14 +90,14 @@ def main():
                 if order:
                     position = {'side' : 'long', 'entry' : current_price, 'qty' : POSITION_SIZE}
                     last_signal = 1
-                    logger.info(f"✅ LONG позиция открыта! {POSITION_SIZE} BTC по {current_price:.2f}")
+                    logger.info(f"✅ LONG позиция открыта! {POSITION_SIZE} {SYMBOL[0:3]} по {current_price:.2f}")
             elif signal == -1 and last_signal != -1 and not position:
                 logger.info(f"🔴 SHORT сигнал! Цена: {df['close'].iloc[-1]:.2f}")
                 order = open_short(SYMBOL, POSITION_SIZE, tp=tp, sl=sl)
                 if order:
                     position = {'side' : 'short', 'entry' : current_price, 'qty' : POSITION_SIZE}
                     last_signal = -1
-                    logger.info(f"✅ SHORT позиция открыта! {POSITION_SIZE} BTC по {current_price:.2f}") 
+                    logger.info(f"✅ SHORT позиция открыта! {POSITION_SIZE} {SYMBOL[0:3]} по {current_price:.2f}") 
 
             # Проверка, не закрылась ли позиция (по стопу/тейку)
             pos_info = session.get_positions(
