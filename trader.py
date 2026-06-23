@@ -9,6 +9,8 @@ import logging
 from dotenv import load_dotenv
 from pybit.unified_trading import HTTP
 from config import CATEGORY
+import csv
+from datetime import datetime
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -66,19 +68,25 @@ def place_market_order(symbol, side, qty, tp, sl):
         return None   
 
 def open_long(symbol, qty, tp, sl):
-    return place_market_order(symbol, 'Buy', qty, tp, sl)
+    logger.info(f"📤 Вызов open_long: {symbol} {qty} TP={tp} SL={sl}")
+    order = place_market_order(symbol, 'Buy', qty, tp, sl)
+    logger.info(f"📤 Результат open_long: {order}")    
+    return order
 
 def open_short(symbol, qty, tp, sl):
-    return place_market_order(symbol, 'Sell', qty, tp, sl)
+    logger.info(f"📤 Вызов open_short: {symbol} {qty} TP={tp} SL={sl}")
+    order = place_market_order(symbol, 'Sell', qty, tp, sl)
+    logger.info(f"📤 Результат open_short: {order}")  
+    return order
 
-def close_position(symbol):
-    btc_balance = get_balance(coin='BTC')
-    if btc_balance and btc_balance > 0:
-        closed_position = open_short('BTCUSDT', btc_balance)
-        return closed_position
-    else:
-        logger.info("Нет позиции для закрытия")        
-        return None
+# def close_position(symbol):
+#     btc_balance = get_balance(coin='BTC')
+#     if btc_balance and btc_balance > 0:
+#         closed_position = open_short('BTCUSDT', btc_balance)
+#         return closed_position
+#     else:
+#         logger.info("Нет позиции для закрытия")        
+#         return None
 
 
 # In[ ]:
@@ -93,4 +101,31 @@ def test_connection():
     except Exception as e:
         logger.error(f"❌ Ошибка подключения: {e}")        
         return False
+
+
+# In[ ]:
+
+
+def log_trade_to_csv(symbol, side, qty, entry_price, tp, sl, exit_price=None, pnl=None, status=None):
+    file_name = os.getenv(CSV_FILE)
+    file_exist = os.path.isfile(file_name)
+    with open(file_name, mode='a', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        if not file_exist:
+            writer.writerow(['timestamp', 'symbol', 'side', 'qty', 
+                'entry_price', 'tp', 'sl', 'exit_price', 
+                'pnl', 'status'])
+        writer.writerow([
+            datetime.now().isoformat(),
+            symbol,
+            side,
+            qty,
+            round(entry_price, 6),
+            round(tp, 6) if tp else None,
+            round(ls, 6) if ls else None,
+            round(exit_price, 6) if exit_price else None,
+            round(pnl, 6) if pnl else None,
+            status
+        ])      
+
 

@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 from pybit.unified_trading import HTTP
 from config import STRATEGY_PARAMS, SYMBOL, TIMEFRAME, POSITION_SIZE, CATEGORY
 from strategy import generating_signals
-from trader import get_balance, place_market_order, open_long, open_short, close_position, test_connection
+from trader import get_balance, place_market_order, open_long, open_short, test_connection
 
 load_dotenv()
 
@@ -42,6 +42,7 @@ session = HTTP(
 )
 
 def fetch_klines(limit=200):
+    logger.info(f"📊 Загрузка данных для {SYMBOL} (категория: {CATEGORY})")
     klines = session.get_kline(
         category=CATEGORY,
         symbol = SYMBOL,
@@ -52,7 +53,7 @@ def fetch_klines(limit=200):
     ticker_df.set_index('datetime', inplace=True)
     ticker_df = ticker_df.astype('float64')
     ticker_df = ticker_df.sort_index()
-
+    logger.info(f"📈 Последняя цена в данных: {ticker_df['close'].iloc[-1]}")
     return ticker_df
 
 def main():
@@ -76,21 +77,34 @@ def main():
     while True:
         try:
             df = fetch_klines(limit=200)
+            df_id = id(df)
             signal, tp, sl = generating_signals(df, STRATEGY_PARAMS)
             current_price = df['close'].iloc[-1]
 
             if time.time() - last_heartbeat > 300:
                 balance = get_balance('USDT')
-                logger.info(f"💓 Heartbeat | USDT: {balance} | Цена: {current_price}")
+                logger.info(f"💓 Heartbeat | USDT: {balance} | Цена: {current_price} | df_id: {df_id}")
                 last_heartbeat = time.time()
 
             if signal == 1 and last_signal != 1 and not position:
-                logger.info(f"🟢 LONG сигнал! Цена: {df['close'].iloc[-1]:.2f}")
+                logger.info(f"🟢 LONG сигнал! Цена: {df['close'].iloc[-1]:.2f} | df_id: {id(df)}")
                 order = open_long(SYMBOL, POSITION_SIZE, tp=tp, sl=sl)
                 if order:
                     position = {'side' : 'long', 'entry' : current_price, 'qty' : POSITION_SIZE}
                     last_signal = 1
                     logger.info(f"✅ LONG позиция открыта! {POSITION_SIZE} {SYMBOL[0:3]} по {current_price:.2f}")
+                    log_trade_to_csv(
+                        symbol=SYMBOL, 
+                        side='LONG', 
+                        qty=POSITION_SIZE, 
+                        entry_price=current_price, 
+                        tp=tp, 
+                        sl=sl, 
+                        exit_price=None, 
+                        pnl=None, 
+                        status='Open'
+                    )
+
             elif signal == -1 and last_signal != -1 and not position:
                 logger.info(f"🔴 SHORT сигнал! Цена: {df['close'].iloc[-1]:.2f}")
                 order = open_short(SYMBOL, POSITION_SIZE, tp=tp, sl=sl)
@@ -98,6 +112,17 @@ def main():
                     position = {'side' : 'short', 'entry' : current_price, 'qty' : POSITION_SIZE}
                     last_signal = -1
                     logger.info(f"✅ SHORT позиция открыта! {POSITION_SIZE} {SYMBOL[0:3]} по {current_price:.2f}") 
+                    log_trade_to_csv(
+                        symbol=SYMBOL, 
+                        side='LONG', 
+                        qty=POSITION_SIZE, 
+                        entry_price=current_price, 
+                        tp=tp, 
+                        sl=sl, 
+                        exit_price=None, 
+                        pnl=None, 
+                        status='Open'
+                    )
 
             # Проверка, не закрылась ли позиция (по стопу/тейку)
             pos_info = session.get_positions(
@@ -105,9 +130,24 @@ def main():
                 symbol=SYMBOL
             )
             if pos_info and float(pos_info.get('result').get('list')[0].get('size')) < 10 and position:
-                    logger.info(f"🔒 Позиция закрыта (по стопу или тейку)")
-                    position = None
-                    last_signal = None
+                exit_price = current_price,
+                if position['side'] == 'long':
+                    pnl = (exit_price - position['entry'])*position['qty']
+                else:
+                    pnl = (position['entry']-exit_price)*position['side']
+                logger.info(f"🔒 Позиция закрыта (по стопу или тейку)")
+                log_trade_to_csv(
+                    symbol=SYMBOL, 
+                    side=position['side'], 
+                    qty=position['qty'], 
+                    entry_price=position['entry'], 
+                    tp=None, 
+                    sl=None, 
+                    exit_price=exit_price, 
+                    pnl=pnl, 
+                    status='closed')
+                position = None
+                last_signal = None
 
             time.sleep(60)
 
