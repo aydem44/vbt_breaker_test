@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 from pybit.unified_trading import HTTP
 from config import STRATEGY_PARAMS, SYMBOL, TIMEFRAME, POSITION_SIZE, CATEGORY
 from strategy import generating_signals
-from trader import get_balance, place_market_order, open_long, open_short, test_connection
+from trader import get_balance, place_market_order, open_long, open_short, test_connection, log_trade_to_csv, send_telegram_message
 
 load_dotenv()
 
@@ -64,6 +64,12 @@ def main():
     logger.info(f"Параметры: {STRATEGY_PARAMS}")
     logger.info(f"Размер позиции: {POSITION_SIZE} {SYMBOL[0:3]}")
     logger.info("="*60)
+    send_telegram_message(
+        f"🤖 <b>Робот запущен</b>\n"
+        f"Символ: {SYMBOL}\n"
+        f"Таймфрейм: {TIMEFRAME}\n"
+        f"Размер позиции: {POSITION_SIZE} {SYMBOL[0:3]}"
+    )
 
     # Проверим подключение
     if not test_connection():
@@ -104,6 +110,15 @@ def main():
                         pnl=None, 
                         status='Open'
                     )
+                    send_telegram_message(
+                        f"🟢 <b>Открыта LONG-позиция </b>\n"
+                        f"Символ: {SYMBOL}\n"
+                        f"Цена: {current_price:.4f}\n"
+                        f"Размер: {POSITION_SIZE} {SYMBOL[0:3]}\n"
+                        f"TP: {tp:.4f}\n"
+                        f"SL: {sl:.4f}\n"
+                        f"Время: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                    )
 
             elif signal == -1 and last_signal != -1 and not position:
                 logger.info(f"🔴 SHORT сигнал! Цена: {df['close'].iloc[-1]:.2f}")
@@ -122,6 +137,15 @@ def main():
                         exit_price=None, 
                         pnl=None, 
                         status='Open'
+                    )
+                    send_telegram_message(
+                        f"🔴 <b>Открыта SHORT-позиция</b>\n"
+                        f"Символ: {SYMBOL}\n"
+                        f"Цена: {current_price:.4f}\n"
+                        f"Размер: {POSITION_SIZE} {SYMBOL[0:3]}\n"
+                        f"TP: {tp:.4f}\n"
+                        f"SL: {sl:.4f}\n"
+                        f"Время: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
                     )
 
             # Проверка, не закрылась ли позиция (по стопу/тейку)
@@ -146,9 +170,15 @@ def main():
                     exit_price=exit_price, 
                     pnl=pnl, 
                     status='closed')
+                send_telegram_message(
+                    f"<b>🔒 Закрыта {position['side']}-позиция</b>\n"
+                    f"Символ: {SYMBOL}\n"
+                    f"Цена: {exit_price:.4f}\n"
+                    f"Размер: {position['qty']} {SYMBOL[0:3]}\n"
+                    f"PNL: {pnl}"
+                )
                 position = None
                 last_signal = None
-
             time.sleep(60)
 
         except KeyboardInterrupt:

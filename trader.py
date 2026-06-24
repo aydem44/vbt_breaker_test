@@ -11,6 +11,7 @@ from pybit.unified_trading import HTTP
 from config import CATEGORY
 import csv
 from datetime import datetime
+import requests
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -28,6 +29,9 @@ session = HTTP(
     api_key = os.getenv('BYBIT_API_KEY'),
     api_secret = os.getenv('BYBIT_SECRET')
 )
+
+TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
+TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
 
 # In[17]:
@@ -128,4 +132,27 @@ def log_trade_to_csv(symbol, side, qty, entry_price, tp, sl, exit_price=None, pn
             status
         ])      
 
+
+
+# In[ ]:
+
+
+def send_telegram_message(message):
+    if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
+        logger.warning("Telegram токен или chat_id не настроены в .env")
+        return
+    try:
+        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+        payload = {
+            'chat_id': TELEGRAM_CHAT_ID,
+            'text': message,
+            'parse_mode': 'HTML'            
+        }
+        response = requests.post(url, data=payload, timeout=10)
+        if response.status_code == 200:
+            logger.debug("✅ Telegram сообщение отправлено")
+        else:
+            logger.error(f"❌ Ошибка отправки в Telegram: {response.text}")
+    except Exception as e:
+        logger.error(f"❌ Ошибка подключения и отправки сообщения в Телеграм: {e}")
 
