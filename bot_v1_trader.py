@@ -96,7 +96,11 @@ def main():
                 logger.info(f"🟢 LONG сигнал! Цена: {df['close'].iloc[-1]:.2f} | df_id: {id(df)}")
                 order = open_long(SYMBOL, POSITION_SIZE, tp=tp, sl=sl)
                 if order:
-                    position = {'side' : 'long', 'entry' : current_price, 'qty' : POSITION_SIZE}
+                    pos_info = session.get_positions(
+                        category=CATEGORY,
+                        symbol=SYMBOL
+                    )
+                    position = {'side' : 'long', 'entry' : pos_info.get('result').get('list')[0].get('avgPrice'), 'qty' : pos_info.get('result').get('list')[0].get('size')}
                     last_signal = 1
                     logger.info(f"✅ LONG позиция открыта! {POSITION_SIZE} {SYMBOL[0:3]} по {current_price:.2f}")
                     log_trade_to_csv(
@@ -124,7 +128,11 @@ def main():
                 logger.info(f"🔴 SHORT сигнал! Цена: {df['close'].iloc[-1]:.2f}")
                 order = open_short(SYMBOL, POSITION_SIZE, tp=tp, sl=sl)
                 if order:
-                    position = {'side' : 'short', 'entry' : current_price, 'qty' : POSITION_SIZE}
+                    pos_info = session.get_positions(
+                        category=CATEGORY,
+                        symbol=SYMBOL
+                    )
+                    position = {'side' : 'short', 'entry' : pos_info.get('result').get('list')[0].get('avgPrice'), 'qty' : pos_info.get('result').get('list')[0].get('size')}
                     last_signal = -1
                     logger.info(f"✅ SHORT позиция открыта! {POSITION_SIZE} {SYMBOL[0:3]} по {current_price:.2f}") 
                     log_trade_to_csv(
@@ -153,7 +161,8 @@ def main():
                 category=CATEGORY,
                 symbol=SYMBOL
             )
-            if pos_info and float(pos_info.get('result').get('list')[0].get('size')) < 10 and position:
+            if float(pos_info.get('result').get('list')[0].get('size')) < 10 and position:
+                print(float(pos_info.get('result').get('list')[0].get('size')))
                 exit_price = current_price,
                 if position['side'] == 'long':
                     pnl = (exit_price - position['entry'])*position['qty']

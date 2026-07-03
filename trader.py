@@ -111,7 +111,7 @@ def test_connection():
 
 
 def log_trade_to_csv(symbol, side, qty, entry_price, tp, sl, exit_price=None, pnl=None, status=None):
-    file_name = os.getenv(CSV_FILE)
+    file_name = os.getenv('CSV_FILE')
     file_exist = os.path.isfile(file_name)
     with open(file_name, mode='a', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
