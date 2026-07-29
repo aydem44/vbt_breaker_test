@@ -7,3 +7,7 @@ venv/
 *.log
 *.ipynb
 *.ipynb_checkpoints/
+*.swp
+*.swo
+*.json
+*.csv

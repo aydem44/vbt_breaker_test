@@ -117,10 +117,10 @@ def main():
                     send_telegram_message(
                         f"🟢 <b>Открыта LONG-позиция </b>\n"
                         f"Символ: {SYMBOL}\n"
-                        f"Цена: {current_price:.4f}\n"
+                        f"Цена: {current_price}\n"
                         f"Размер: {POSITION_SIZE} {SYMBOL[0:3]}\n"
-                        f"TP: {tp:.4f}\n"
-                        f"SL: {sl:.4f}\n"
+                        f"TP: {tp}\n"
+                        f"SL: {sl}\n"
                         f"Время: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
                     )
 
@@ -149,10 +149,10 @@ def main():
                     send_telegram_message(
                         f"🔴 <b>Открыта SHORT-позиция</b>\n"
                         f"Символ: {SYMBOL}\n"
-                        f"Цена: {current_price:.4f}\n"
+                        f"Цена: {current_price}\n"
                         f"Размер: {POSITION_SIZE} {SYMBOL[0:3]}\n"
-                        f"TP: {tp:.4f}\n"
-                        f"SL: {sl:.4f}\n"
+                        f"TP: {tp}\n"
+                        f"SL: {sl}\n"
                         f"Время: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
                     )
 
@@ -162,12 +162,16 @@ def main():
                 symbol=SYMBOL
             )
             if float(pos_info.get('result').get('list')[0].get('size')) < 10 and position:
-                print(float(pos_info.get('result').get('list')[0].get('size')))
-                exit_price = current_price,
+                
+                exit_price = current_price
+                pos_entry = float(position['entry'])
+                pos_qty = float(position['qty'])
+
                 if position['side'] == 'long':
-                    pnl = (exit_price - position['entry'])*position['qty']
+                    pnl = (exit_price - pos_entry)/pos_entry
                 else:
-                    pnl = (position['entry']-exit_price)*position['side']
+                    pnl = (pos_entry - exit_price)/pos_entry
+
                 logger.info(f"🔒 Позиция закрыта (по стопу или тейку)")
                 log_trade_to_csv(
                     symbol=SYMBOL, 
@@ -182,7 +186,7 @@ def main():
                 send_telegram_message(
                     f"<b>🔒 Закрыта {position['side']}-позиция</b>\n"
                     f"Символ: {SYMBOL}\n"
-                    f"Цена: {exit_price:.4f}\n"
+                    f"Цена: {exit_price}\n"
                     f"Размер: {position['qty']} {SYMBOL[0:3]}\n"
                     f"PNL: {pnl}"
                 )

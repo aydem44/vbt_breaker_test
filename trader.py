@@ -124,11 +124,11 @@ def log_trade_to_csv(symbol, side, qty, entry_price, tp, sl, exit_price=None, pn
             symbol,
             side,
             qty,
-            round(entry_price, 6),
-            round(tp, 6) if tp else None,
-            round(ls, 6) if ls else None,
-            round(exit_price, 6) if exit_price else None,
-            round(pnl, 6) if pnl else None,
+            round(float(entry_price), 6),
+            round(float(tp), 6) if tp else None,
+            round(float(sl), 6) if sl else None,
+            round(float(exit_price), 6) if exit_price else None,
+            round(float(pnl), 6) if pnl else None,
             status
         ])      
 
