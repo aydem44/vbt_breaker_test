@@ -8,6 +8,7 @@
 # Торговля на бирже по сигналам 
 import pandas as pd
 import os
+from datetime import datetime
 import logging
 import time
 from dotenv import load_dotenv
